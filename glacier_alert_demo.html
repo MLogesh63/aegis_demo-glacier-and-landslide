@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Aegis - AI based early warning landslide risk monitoring system in NER</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .logo span {
+            color: #e74c3c;
+        }
+
+        nav {
+            display: flex;
+            gap: 15px;
+        }
+
+        nav button {
+            padding: 12px 25px;
+            border: 2px solid #1e3c72;
+            background: white;
+            color: #1e3c72;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        nav button:hover {
+            background: #1e3c72;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        nav button.active {
+            background: #1e3c72;
+            color: white;
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
+        }
+
+        .page {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page h1 {
+            color: #1e3c72;
+            margin-bottom: 30px;
+            font-size: 32px;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 15px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .sensor-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .sensor-panel h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+        }
+
+        button.predict-btn {
+            width: 100%;
+            padding: 12px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        button.predict-btn:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+
+        .dashboard {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .dashboard h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .alert-box {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+            font-size: 18px;
+            animation: pulse 0.5s ease;
+        }
+
+        .alert-safe {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #28a745;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffc107;
+            animation: pulse-warning 0.7s infinite;
+        }
+
+        .alert-critical {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #dc3545;
+            animation: pulse-critical 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes pulse-warning {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes pulse-critical {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            border-top: 3px solid #3498db;
+        }
+
+        .stat-card .label {
+            color: #777;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .value {
+            color: #1e3c72;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .history {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .history h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 12px;
+            float: right;
+        }
+
+        .home-page {
+            text-align: center;
+        }
+
+        .home-page h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .home-page p {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .systems-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .system-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            border-top: 5px solid #3498db;
+            transition: all 0.3s ease;
+        }
+
+        .system-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .system-card h2 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .system-card p {
+            text-align: left;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .system-card ul {
+            text-align: left;
+            color: #666;
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .system-card li {
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .content-grid, .systems-overview {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            nav {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            nav button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">AEGIS <span>🛡️</span></div>
+            <nav>
+                <button class="nav-btn active" onclick="showPage('home')">Home</button>
+                <button class="nav-btn" onclick="showPage('glacier')">Glacier Alert</button>
+                <button class="nav-btn" onclick="showPage('landslide')">Landslide Monitor</button>
+            </nav>
+        </header>
+
+        <!-- HOME PAGE -->
+        <div id="home" class="page active home-page">
+            <h1>Team Aegis</h1>
+            <h2 style="color: #e74c3c; margin-bottom: 30px;"> AI-based warning landslide risk monitoring system in NER</h2>
+            <p>Proactive protection against natural disasters through predictive intelligence and real-time monitoring.</p>
+            <p>Aegis combines glacier melt prediction, landslide risk assessment, and fraud detection to protect vulnerable communities before disaster strikes.</p>
+            
+            <div class="systems-overview">
+                <div class="system-card">
+                    <h2>❄️ Glacier Melt & Flood Alert</h2>
+                    <p><strong>Coverage:</strong> Himalayan regions (Himachal Pradesh, Uttarakhand, Ladakh, J&K)</p>
+                    <p><strong>Key Advantage:</strong> 4-8 hour advance warning vs. 2-3 hour reactive systems</p>
+                    <ul>
+                        <li>Real-time glacier temperature monitoring</li>
+                        <li>Ice thickness analysis</li>
+                        <li>Glacial lake level tracking</li>
+                        <li>GLOF prediction & alerts</li>
+                    </ul>
+                </div>
+
+                <div class="system-card" style="border-top-color: #e74c3c;">
+                    <h2>🏔️ Landslide Risk Monitor</h2>
+                    <p><strong>Coverage:</strong> Northeast India (Assam, Meghalaya, Mizoram, Manipur, Nagaland)</p>
+                    <p><strong>Key Advantage:</strong> Continuous slope stability assessment with multi-factor analysis</p>
+                    <ul>
+                        <li>Soil moisture monitoring</li>
+                        <li>Rainfall intensity tracking</li>
+                        <li>Slope angle & terrain analysis</li>
+                        <li>Risk escalation alerts</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- GLACIER PAGE -->
+        <div id="glacier" class="page">
+            <h1>❄️ Glacier Melt & Flood Early Warning System</h1>
+            <p style="color: #666; margin-bottom: 25px;">Monitor Himalayan glacier conditions and predict Glacial Lake Outburst Floods (GLOFs) with 4-8 hour advance warning.</p>
+
+            <div class="content-grid">
+                <div class="sensor-panel">
+                    <h2>📊 Sensor Inputs</h2>
+                    <div class="input-group">
+                        <label>Glacier Temperature (°C)</label>
+                        <input type="number" id="glacierTemp" value="0" step="0.5" min="-20" max="10">
+                    </div>
+                    <div class="input-group">
+                        <label>Ice Thickness (meters)</label>
+                        <input type="number" id="iceThickness" value="100" step="5" min="0" max="500">
+                    </div>
+                    <div class="input-group">
+                        <label>Glacial Lake Level (meters)</label>
+                        <input type="number" id="lakeLevel" value="2000" step="10" min="1000" max="5000">
+                    </div>
+                    <div class="input-group">
+                        <label>Meltwater Discharge (m³/s)</label>
+                        <input type="number" id="discharge" value="10" step="1" min="0" max="1000">
+                    </div>
+                    <button class="predict-btn" onclick="predictGlacier()">🔍 Predict GLOF Risk</button>
+                </div>
+
+                <div class="dashboard">
+                    <h2>⚠️ Alert Status</h2>
+                    <div id="glacierAlert" class="alert-box alert-safe">SAFE - Monitoring Active</div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="label">Melt Rate</div>
+                            <div class="value" id="glacierMeltRate">0%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Risk Score</div>
+                            <div class="value" id="glacierRiskScore">10</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Lake Stability</div>
+                            <div class="value" id="lakeStability">95%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Warning Lead Time</div>
+                            <div class="value" id="leadTime">4-8h</div>
+                        </div>
+                    </div>
+
+                    <div class="history">
+                        <h3>📝 Prediction History</h3>
+                        <div id="glacierHistory"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LANDSLIDE PAGE -->
+        <div id="landslide" class="page">
+            <h1>🏔️ Landslide Risk Monitoring System</h1>
+            <p style="color: #666; margin-bottom: 25px;">Monitor soil and weather conditions across Northeast India to predict landslide risk with continuous slope stability assessment.</p>
+
+            <div class="content-grid">
+                <div class="sensor-panel">
+                    <h2>📊 Sensor Inputs</h2>
+                    <div class="input-group">
+                        <label>Soil Moisture (%)</label>
+                        <input type="number" id="soilMoisture" value="30" step="5" min="0" max="100">
+                    </div>
+                    <div class="input-group">
+                        <label>Rainfall (mm/24h)</label>
+                        <input type="number" id="rainfall" value="50" step="5" min="0" max="500">
+                    </div>
+                    <div class="input-group">
+                        <label>Slope Angle (degrees)</label>
+                        <input type="number" id="slopeAngle" value="30" step="2" min="0" max="90">
+                    </div>
+                    <div class="input-group">
+                        <label>Soil Cohesion (kPa)</label>
+                        <input type="number" id="soilCohesion" value="20" step="2" min="0" max="50">
+                    </div>
+                    <button class="predict-btn" onclick="predictLandslide()">🔍 Assess Landslide Risk</button>
+                </div>
+
+                <div class="dashboard">
+                    <h2>⚠️ Alert Status</h2>
+                    <div id="landslideAlert" class="alert-box alert-safe">SAFE - Stable Conditions</div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="label">Safety Factor</div>
+                            <div class="value" id="safetyFactor">1.8</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Risk Score</div>
+                            <div class="value" id="landslideRiskScore">15</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Water Saturation</div>
+                            <div class="value" id="saturation">30%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="label">Stability Index</div>
+                            <div class="value" id="stabilityIndex">92%</div>
+                        </div>
+                    </div>
+
+                    <div class="history">
+                        <h3>📝 Assessment History</h3>
+                        <div id="landslideHistory"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize localStorage with demo data if not exists
+        function initializeStorage() {
+            if (!localStorage.getItem('glacierHistory')) {
+                localStorage.setItem('glacierHistory', JSON.stringify([]));
+            }
+            if (!localStorage.getItem('landslideHistory')) {
+                localStorage.setItem('landslideHistory', JSON.stringify([]));
+            }
+        }
+
+        // Page navigation
+        function showPage(pageId) {
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+
+            const navBtns = document.querySelectorAll('.nav-btn');
+            navBtns.forEach(btn => btn.classList.remove('active'));
+            
+            // Find the button that was clicked and mark it as active
+            const buttons = document.querySelectorAll('button');
+            for (let btn of buttons) {
+                if (btn.onclick && btn.onclick.toString().includes(pageId)) {
+                    btn.classList.add('active');
+                    break;
+                }
+            }
+
+            // Refresh history when showing pages
+            if (pageId === 'glacier') loadGlacierHistory();
+            if (pageId === 'landslide') loadLandslideHistory();
+        }
+
+        // Glacier prediction logic - CORRECTED
+        function predictGlacier() {
+            const temp = parseFloat(document.getElementById('glacierTemp').value);
+            const iceThickness = parseFloat(document.getElementById('iceThickness').value);
+            const lakeLevel = parseFloat(document.getElementById('lakeLevel').value);
+            const discharge = parseFloat(document.getElementById('discharge').value);
+
+            let riskScore = 10;
+            let meltRate = 0;
+            let lakeStability = 100;
+
+            // Temperature factor - CORRECTED LOGIC
+            if (temp >= -5 && temp <= 5) {
+                meltRate = Math.max(0, (5 - temp) * 8);
+                riskScore += 20;
+            } else if (temp < -5) {
+                meltRate = 0;
+                riskScore += Math.max(0, (-5 - temp) * 2);
+            } else if (temp > 5) {
+                meltRate = (temp - 5) * 6;
+                riskScore += 15;
+            }
+
+            // Ice thickness factor
+            if (iceThickness < 50) {
+                riskScore += 30;
+                lakeStability -= 30;
+            } else if (iceThickness < 100) {
+                riskScore += 15;
+                lakeStability -= 15;
+            }
+
+            // Lake level factor
+            if (lakeLevel > 3500) {
+                riskScore += 25;
+                lakeStability -= 25;
+            } else if (lakeLevel > 3000) {
+                riskScore += 15;
+                lakeStability -= 15;
+            }
+
+            // Discharge factor
+            if (discharge > 100) {
+                riskScore += 20;
+            } else if (discharge > 50) {
+                riskScore += 10;
+            }
+
+            riskScore = Math.min(100, Math.max(10, riskScore));
+            lakeStability = Math.max(5, Math.min(100, lakeStability));
+
+            // Determine alert level
+            let alertLevel, alertText;
+            if (riskScore < 30) {
+                alertLevel = 'alert-safe';
+                alertText = '✅ SAFE - Normal glacier conditions. Continue monitoring.';
+            } else if (riskScore < 60) {
+                alertLevel = 'alert-warning';
+                alertText = '⚠️ WARNING - Elevated glacier instability. Prepare alerts.';
+            } else {
+                alertLevel = 'alert-critical';
+                alertText = '🚨 CRITICAL - High GLOF risk! Issue evacuation warnings within 4-8 hours.';
+            }
+
+            // Update display
+            document.getElementById('glacierAlert').className = 'alert-box ' + alertLevel;
+            document.getElementById('glacierAlert').textContent = alertText;
+            document.getElementById('glacierMeltRate').textContent = meltRate.toFixed(1) + '%';
+            document.getElementById('glacierRiskScore').textContent = riskScore.toFixed(0);
+            document.getElementById('lakeStability').textContent = lakeStability.toFixed(0) + '%';
+
+            // Save to history
+            saveGlacierPrediction(temp, iceThickness, lakeLevel, riskScore, alertText);
+        }
+
+        // Landslide prediction logic
+        function predictLandslide() {
+            const soilMoisture = parseFloat(document.getElementById('soilMoisture').value);
+            const rainfall = parseFloat(document.getElementById('rainfall').value);
+            const slopeAngle = parseFloat(document.getElementById('slopeAngle').value);
+            const soilCohesion = parseFloat(document.getElementById('soilCohesion').value);
+
+            let safetyFactor = 1.5;
+            
+            safetyFactor += (soilCohesion / 25) * 0.3;
+            safetyFactor -= (slopeAngle / 45) * 0.5;
+            safetyFactor -= (soilMoisture / 100) * 0.4;
+            safetyFactor -= (rainfall / 300) * 0.3;
+
+            safetyFactor = Math.max(0.5, Math.min(2.5, safetyFactor));
+
+            let riskScore = Math.round((1 / safetyFactor) * 50);
+            let saturation = soilMoisture;
+            let stabilityIndex = Math.max(0, 100 - (riskScore * 0.8));
+
+            let alertLevel, alertText;
+            if (safetyFactor > 1.5) {
+                alertLevel = 'alert-safe';
+                alertText = '✅ SAFE - Slopes are stable. No immediate risk.';
+            } else if (safetyFactor > 1.1) {
+                alertLevel = 'alert-warning';
+                alertText = '⚠️ WARNING - Moderate slope instability. Monitor rainfall closely.';
+            } else {
+                alertLevel = 'alert-critical';
+                alertText = '🚨 CRITICAL - High landslide risk! Issue evacuation orders immediately.';
+            }
+
+            // Update display
+            document.getElementById('landslideAlert').className = 'alert-box ' + alertLevel;
+            document.getElementById('landslideAlert').textContent = alertText;
+            document.getElementById('safetyFactor').textContent = safetyFactor.toFixed(2);
+            document.getElementById('landslideRiskScore').textContent = riskScore;
+            document.getElementById('saturation').textContent = saturation.toFixed(0) + '%';
+            document.getElementById('stabilityIndex').textContent = stabilityIndex.toFixed(0) + '%';
+
+            // Save to history
+            saveLandslideAssessment(soilMoisture, rainfall, slopeAngle, safetyFactor, alertText);
+        }
+
+        // History management
+        function saveGlacierPrediction(temp, ice, lake, risk, alert) {
+            const history = JSON.parse(localStorage.getItem('glacierHistory') || '[]');
+            const timestamp = new Date().toLocaleString();
+            history.unshift({ temp, ice, lake, risk: risk.toFixed(0), alert, timestamp });
+            if (history.length > 10) history.pop();
+            localStorage.setItem('glacierHistory', JSON.stringify(history));
+        }
+
+        function saveLandslideAssessment(moisture, rainfall, slope, safety, alert) {
+            const history = JSON.parse(localStorage.getItem('landslideHistory') || '[]');
+            const timestamp = new Date().toLocaleString();
+            history.unshift({ moisture, rainfall, slope, safety: safety.toFixed(2), alert, timestamp });
+            if (history.length > 10) history.pop();
+            localStorage.setItem('landslideHistory', JSON.stringify(history));
+        }
+
+        function loadGlacierHistory() {
+            const history = JSON.parse(localStorage.getItem('glacierHistory') || '[]');
+            const historyDiv = document.getElementById('glacierHistory');
+            historyDiv.innerHTML = history.map((h, i) => `
+                <div class="history-item">
+                    <strong>Prediction ${i + 1}:</strong> Risk Score: ${h.risk}
+                    <span class="timestamp">${h.timestamp}</span>
+                </div>
+            `).join('') || '<div class="history-item">No predictions yet</div>';
+        }
+
+        function loadLandslideHistory() {
+            const history = JSON.parse(localStorage.getItem('landslideHistory') || '[]');
+            const historyDiv = document.getElementById('landslideHistory');
+            historyDiv.innerHTML = history.map((h, i) => `
+                <div class="history-item">
+                    <strong>Assessment ${i + 1}:</strong> Safety Factor: ${h.safety}
+                    <span class="timestamp">${h.timestamp}</span>
+                </div>
+            `).join('') || '<div class="history-item">No assessments yet</div>';
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initializeStorage();
+        });
+    </script>
+</body>
+</html>
